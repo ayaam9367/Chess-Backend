@@ -49,7 +49,7 @@ const userSignUpDataValidation = (data) => {
     isError: error,
     value,
   };
-};
+}; 
 
 exports.signUpUser = async (req, res) => {
   const activity = "Add User |";
