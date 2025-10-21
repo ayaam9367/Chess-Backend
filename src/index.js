@@ -10,8 +10,9 @@ console.log(`Started Environment: ${process.env.NODE_ENV}`);
 console.log(`Using configuration file : .env.${process.env.NODE_ENV}`);
 
 const {server} = require('./server.js')
+const {webSocketServer} = require('./webSocket/server.js');
 const connectDatabase = require('./config/database.js');
-require('./utility/helpers/nodeCron.js');
+// require('./utility/helpers/nodeCron.js'); commenting out cron job for some time
 require('./expressServer.js');
 
 (async()=>{
