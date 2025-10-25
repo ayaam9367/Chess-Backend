@@ -21,3 +21,7 @@ wss.on('connection', (ws, req)=>{
 });
 
 console.log(`🔌 WebSocket server running on : ws://localhost:${process.env.WEBSOCKET_PORT}`);
+
+module.exports = {
+    wss
+}
