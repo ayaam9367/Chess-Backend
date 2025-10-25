@@ -1,4 +1,6 @@
 const { wss } = require("./server.js"); //require the wss from its server file
+const { v7: uuidv7 } = require("uuid");
+const { Chess } = require("chess");
 
 let waiting = null;
 let games = new Map();
@@ -32,19 +34,39 @@ wss.on("connection", (ws, req) => {
         const player1 = waiting;
         const player2 = ws;
 
+        const chess = new Chess();
+        board = chess.board();
+        const gameId = uuidv7();
+
         //clear the waiting slot
         waiting = null;
 
         //store game if needed
-        const gameId = Date.now().toString();
-        games.set(gameId, { player1, player2, moves: [] });
+        const start_time = Date.now().toString();
+        const game = {
+          gameId,
+          player1,
+          player2,
+          chess,
+          start_time,
+        };
+        games.set(gameId, game);
+
+        [player1, player2].forEach((p) => {
+          p.send(
+            JSON.stringify({
+              type: "game_start",
+              fen : chess.fen(),
+            })
+          );
+        });
 
         //notify the players
         player1.send(
           JSON.stringify({
             type: "game_start",
-            message: `Opponent matched: ${player2}`,
             color: `white`,
+            fen : chess.fen(),
             opponent: player2,
             gameId,
           })
@@ -52,30 +74,20 @@ wss.on("connection", (ws, req) => {
         player2.send(
           JSON.stringify({
             type: "game_start",
-            message: `Opponent matched: ${player1}`,
             color: `black`,
+            fen : chess.fen(),
             opponent: player1,
             gameId,
           })
         );
 
         // attach metadata for future reference
-        player1.gameId = gameId;
-        player2.gameId = gameId;
+        // player1.gameId = gameId;
+        // player2.gameId = gameId;
       }
     } else if (msg.type === generalSocketMessages.MOVE) {
-      const { gameId, move } = msg;
-      const game = games.get(gameId);
-      if (!game) {
-        ws.send(JSON.stringify({ type: "error", message: "Game not found" }));
-        return;
-      }
-
-      (game.moves ??= []).push(move);
-
-      //relay the move to the opponent
-      const opponent = game.player1 === ws ? game.player2 : game.player1;
-      opponent.send(JSON.stringify({ type: "opponent_move", move }));
+      const { move, gameId } = msg;
+      makeMove(ws, gameId, move);
 
       console.log(`♟️ Move in game ${gameId}: ${move}`);
     }
@@ -88,3 +100,104 @@ wss.on("connection", (ws, req) => {
     if (waiting === ws) waiting = null;
   });
 });
+
+/**
+ * Do the following things here :
+ * 1. Validate the move
+ * 2. Is it this users move
+ * 3. Update the board, push the move in the game object, update games Object
+ *
+ * 4. Check if the game is over
+ *
+ * 5. Send updated board to both the players
+ */
+
+const makeMove = (ws, gameId = "", move = "") => {
+  const game = games.get(gameId);
+
+  if (!game) {
+    ws.send(JSON.stringify({ type: "error", message: "Game not found" }));
+    return;
+  }
+  const { player1, player2 } = game;
+  //check if it is this user's move
+  const isWhiteMove = chess.turn() === "w";
+  const isPlayer1 = ws === player1;
+
+  if ((!isWhiteMove && isPlayer1) || (isWhiteMove && !isPlayer1)) {
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        message: "Not your turn!",
+      })
+    );
+    return;
+  }
+
+  const { chess } = game;
+  const moveResult = chess.move(move);
+
+  if (moveResult === null) {
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        message: "Invalid move",
+      })
+    );
+  }
+
+  //check if the game is draw by 50-move rule, insufficient material
+  const isDraw = chess.isDraw();
+  if (isDraw) {
+    const reason = chess.isDrawByFiftyMoves()
+      ? "Draw By 50 moves rule"
+      : "Draw by Insuffiecient Material Rule";
+
+    [player1, player2].forEach((p) => {
+      p.send(
+        JSON.stringify({
+          type: "game_draw",
+          reason,
+        })
+      );
+    });
+
+    //cleanup
+    games.delete(gameId);
+    return;
+  }
+
+  //check if the game is over by Checkmate, Stalemate, or ThreefoldRepititon
+  const isGameOver = chess.isCheckmate()
+    ? "Checkmate"
+    : chess.isStalemate()
+    ? "Stalemate"
+    : chess.isThreefoldRepitition()
+    ? "Threefold Repition Rule"
+    : "";
+
+  if (isGameOver !== "") {
+    [player1, player2].forEach((p) => {
+      p.send(
+        JSON.stringify({
+          type: "game_over",
+          reason: isGameOver,
+        })
+      );
+    });
+
+    //cleanup
+    games.delete(gameId);
+    return;
+  }
+
+  [player1, player2].forEach((p) => {
+    p.send(
+      JSON.stringify({
+        type: "move_made",
+        move: moveResult,
+        fen: chess.fen(),
+      })
+    );
+  });
+};
