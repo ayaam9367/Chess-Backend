@@ -56,7 +56,7 @@ wss.on("connection", (ws, req) => {
           p.send(
             JSON.stringify({
               type: "game_start",
-              fen : chess.fen(),
+              fen: chess.fen(),
             })
           );
         });
@@ -66,7 +66,7 @@ wss.on("connection", (ws, req) => {
           JSON.stringify({
             type: "game_start",
             color: `white`,
-            fen : chess.fen(),
+            fen: chess.fen(),
             opponent: player2,
             gameId,
           })
@@ -75,7 +75,7 @@ wss.on("connection", (ws, req) => {
           JSON.stringify({
             type: "game_start",
             color: `black`,
-            fen : chess.fen(),
+            fen: chess.fen(),
             opponent: player1,
             gameId,
           })
@@ -135,15 +135,13 @@ const makeMove = (ws, gameId = "", move = "") => {
   }
 
   const { chess } = game;
-  const moveResult = chess.move(move);
-
-  if (moveResult === null) {
-    ws.send(
-      JSON.stringify({
-        type: "error",
-        message: "Invalid move",
-      })
-    );
+  // attempt the move
+  let moveResult;
+  try {
+    moveResult = chess.move(move);
+  } catch (err) {
+    ws.send(JSON.stringify({ type: "error", message: "Invalid move" }));
+    return;
   }
 
   //check if the game is draw by 50-move rule, insufficient material
@@ -182,6 +180,7 @@ const makeMove = (ws, gameId = "", move = "") => {
         JSON.stringify({
           type: "game_over",
           reason: isGameOver,
+          winner : chess.turn() === 'w' ? 'Black' : 'White'
         })
       );
     });
