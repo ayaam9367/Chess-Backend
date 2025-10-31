@@ -1,7 +1,10 @@
 const {WebSocketServer} = require('ws');
+const {setupGameManager} = require('./gameManager');
 
 //create a standalone websocket server
 const wss = new WebSocketServer({port : process.env.WEBSOCKET_PORT});
+
+setupGameManager(wss);
 
 wss.on('connection', (ws, req)=>{
 
