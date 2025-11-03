@@ -130,7 +130,7 @@ const makeMove = (ws, gameId = "", move = "") => {
     ws.send(JSON.stringify({ type: "error", message: "Game not found" }));
     return;
   }
-  const { player1, player2 } = game;
+  const { chess, player1, player2 } = game;
   //check if it is this user's move
   const isWhiteMove = chess.turn() === "w";
   const isPlayer1 = ws === player1;
@@ -145,7 +145,7 @@ const makeMove = (ws, gameId = "", move = "") => {
     return;
   }
 
-  const { chess } = game;
+  // const { chess } = game;
   // attempt the move
   let moveResult;
   try {
@@ -182,7 +182,7 @@ const makeMove = (ws, gameId = "", move = "") => {
     ? "Checkmate"
     : chess.isStalemate()
     ? "Stalemate"
-    : chess.isThreefoldRepitition()
+    : chess.isThreefoldRepetition()
     ? "Threefold Repition Rule"
     : "";
 
