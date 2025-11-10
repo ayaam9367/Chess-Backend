@@ -36,7 +36,7 @@ function setupGameManager(wss) {
           waiting = ws;
           ws.send(
             JSON.stringify({
-              type: "waiting",
+              type: generalSocketMessages.WAITING,
               message: "Waiting for an opponent...",
             })
           );
@@ -66,7 +66,7 @@ function setupGameManager(wss) {
           [player1, player2].forEach((p) => {
             p.send(
               JSON.stringify({
-                type: "game_start",
+                type: generalSocketMessages.START_GAME,
                 fen: chess.fen(),
               })
             );
@@ -75,7 +75,7 @@ function setupGameManager(wss) {
           //notify the players
           player1.send(
             JSON.stringify({
-              type: "game_start",
+              type: generalSocketMessages.START_GAME,
               color: `white`,
               fen: chess.fen(),
               opponent: player2,
@@ -84,7 +84,7 @@ function setupGameManager(wss) {
           );
           player2.send(
             JSON.stringify({
-              type: "game_start",
+              type: generalSocketMessages.START_GAME,
               color: `black`,
               fen: chess.fen(),
               opponent: player1,
@@ -127,7 +127,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   const game = games.get(gameId);
 
   if (!game) {
-    ws.send(JSON.stringify({ type: "error", message: "Game not found" }));
+    ws.send(JSON.stringify({ type: generalSocketMessages.ERROR, message: "Game not found" }));
     return;
   }
   const { chess, player1, player2 } = game;
@@ -138,7 +138,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   if ((!isWhiteMove && isPlayer1) || (isWhiteMove && !isPlayer1)) {
     ws.send(
       JSON.stringify({
-        type: "error",
+        type: generalSocketMessages.ERROR,
         message: "Not your turn!",
       })
     );
@@ -151,7 +151,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   try {
     moveResult = chess.move(move);
   } catch (err) {
-    ws.send(JSON.stringify({ type: "error", message: "Invalid move" }));
+    ws.send(JSON.stringify({ type: generalSocketMessages.ERROR, message: "Invalid move" }));
     return;
   }
 
@@ -165,7 +165,7 @@ const makeMove = (ws, gameId = "", move = "") => {
     [player1, player2].forEach((p) => {
       p.send(
         JSON.stringify({
-          type: "game_draw",
+          type: generalSocketMessages.GAME_DRAW,
           reason,
           winner: "Draw",
         })
@@ -190,7 +190,7 @@ const makeMove = (ws, gameId = "", move = "") => {
     [player1, player2].forEach((p) => {
       p.send(
         JSON.stringify({
-          type: "game_over",
+          type: generalSocketMessages.GAME_OVER ,
           reason: isGameOver,
           winner: chess.turn() === "w" ? "Black" : "White",
         })
@@ -205,7 +205,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   [player1, player2].forEach((p) => {
     p.send(
       JSON.stringify({
-        type: "move_made",
+        type: generalSocketMessages.MOVE,
         move: moveResult,
         fen: chess.fen(),
       })
