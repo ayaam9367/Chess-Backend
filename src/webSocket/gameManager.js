@@ -16,6 +16,7 @@ let games = new Map();
 const socketMessages = require("../utility/messages/en/socketMessages.js");
 
 const generalSocketMessages = socketMessages.general;
+const notificationMessages = socketMessages.notifications;
 
 function setupGameManager(wss) {
   wss.on("connection", (ws, req) => {
@@ -36,7 +37,7 @@ function setupGameManager(wss) {
           waiting = ws;
           ws.send(
             JSON.stringify({
-              type: generalSocketMessages.WAITING,
+              type: notificationMessages.WAITING,
               message: "Waiting for an opponent...",
             })
           );
@@ -66,7 +67,7 @@ function setupGameManager(wss) {
           [player1, player2].forEach((p) => {
             p.send(
               JSON.stringify({
-                type: generalSocketMessages.START_GAME,
+                type: generalSocketMessages.INIT_GAME,
                 fen: chess.fen(),
               })
             );
@@ -75,7 +76,7 @@ function setupGameManager(wss) {
           //notify the players
           player1.send(
             JSON.stringify({
-              type: generalSocketMessages.START_GAME,
+              type: notificationMessages.START_GAME,
               color: `white`,
               fen: chess.fen(),
               opponent: player2,
@@ -84,7 +85,7 @@ function setupGameManager(wss) {
           );
           player2.send(
             JSON.stringify({
-              type: generalSocketMessages.START_GAME,
+              type: notificationMessages.START_GAME,
               color: `black`,
               fen: chess.fen(),
               opponent: player1,
@@ -127,7 +128,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   const game = games.get(gameId);
 
   if (!game) {
-    ws.send(JSON.stringify({ type: generalSocketMessages.ERROR, message: "Game not found" }));
+    ws.send(JSON.stringify({ type: notificationMessages.ERROR, message: "Game not found" }));
     return;
   }
   const { chess, player1, player2 } = game;
@@ -138,7 +139,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   if ((!isWhiteMove && isPlayer1) || (isWhiteMove && !isPlayer1)) {
     ws.send(
       JSON.stringify({
-        type: generalSocketMessages.ERROR,
+        type: notificationMessages.ERROR,
         message: "Not your turn!",
       })
     );
@@ -151,7 +152,7 @@ const makeMove = (ws, gameId = "", move = "") => {
   try {
     moveResult = chess.move(move);
   } catch (err) {
-    ws.send(JSON.stringify({ type: generalSocketMessages.ERROR, message: "Invalid move" }));
+    ws.send(JSON.stringify({ type: notificationMessages.ERROR, message: "Invalid move" }));
     return;
   }
 
